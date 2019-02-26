@@ -7,13 +7,14 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
+
 
 class CategoryViewController: UITableViewController {
     
     
-    var categories = [Category]()
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    let realm = try! Realm()
+    var categories: Results<Category>?
 
     
     override func viewDidLoad() {
@@ -23,9 +24,10 @@ class CategoryViewController: UITableViewController {
     }
 
 
+    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
 
-        return categories.count
+        return categories?.count ?? 1
     }
 
     
@@ -33,10 +35,11 @@ class CategoryViewController: UITableViewController {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
         
-        cell.textLabel?.text = categories[indexPath.row].name
+        cell.textLabel?.text = categories?[indexPath.row].name ?? "No categories added yet"
         
         return cell
     }
+    
     
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -50,11 +53,35 @@ class CategoryViewController: UITableViewController {
         let destinationVC = segue.destination as! TodoListVC
         
         if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCategory = categories[indexPath.row]
+            
+            destinationVC.selectedCategory = categories?[indexPath.row]
         }
     }
 
+    
 
+    func save(category: Category) {
+        
+        do {
+            try realm.write {
+                realm.add(category)
+            }
+        } catch {
+            print("Error saving category \(error)")
+        }
+        tableView.reloadData()
+    }
+    
+    
+    func loadCategories() {
+        
+        categories  = realm.objects(Category.self)
+        tableView.reloadData()
+        
+    }
+    
+    
+    
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         
         var textField = UITextField()
@@ -65,64 +92,22 @@ class CategoryViewController: UITableViewController {
             
             (action) in
             
-            let newCategory = Category(context: self.context)
+            let newCategory = Category()
             
             newCategory.name = textField.text!
             
-            self.categories.append(newCategory)
-            
-            self.tableView.reloadData()
-            
-            self.saveCategories()
+            self.save(category: newCategory)
         }
         
         alert.addTextField { (field) in
             
             textField = field
             
-            textField.placeholder = "Create new category"
+            textField.placeholder = "Add new category"
         }
         
         alert.addAction(action)
         
         present(alert, animated: true, completion: nil)
     }
-    
-    
-    func saveCategories() {
-        
-        do {
-            
-            try context.save()
-            
-        } catch {
-            
-            print("Error saving category, \(error)")
-        }
-        
-        tableView.reloadData()
-    }
-    
-    
-    func loadCategories(with request: NSFetchRequest<Category> = Category.fetchRequest(), predicate: NSPredicate? = nil) {
-        
-        let categoryPredicate = NSPredicate(format: "parentCatefory.name MATCHES %@", selectedCategory!.name!)
-        
-        let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, predicate])
-        
-        request.predicate = compoundPredicate
-        do {
-            
-            categories = try context.fetch(request)
-            
-        } catch {
-            
-            print("Error loading categories, \(error)")
-        }
-        
-        tableView.reloadData()
-    }
-    
-    
-    
 }
