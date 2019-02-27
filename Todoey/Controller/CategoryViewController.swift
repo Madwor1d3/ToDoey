@@ -8,34 +8,47 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 
-class CategoryViewController: UITableViewController {
+class CategoryViewController: SwipeTableViewController {
     
     
     let realm = try! Realm()
+    
     var categories: Results<Category>?
-
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         loadCategories()
+        
+        tableView.separatorStyle = .none
     }
-
+    
 
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-
+        
         return categories?.count ?? 1
     }
-
+    
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
-        cell.textLabel?.text = categories?[indexPath.row].name ?? "No categories added yet"
+        if let category = categories?[indexPath.row] {
+            
+            cell.textLabel?.text = category.name
+            
+            guard let categoryColour = UIColor(hexString: category.colour) else {fatalError()}
+            
+            cell.backgroundColor = categoryColour
+            
+            cell.textLabel?.textColor = ContrastColorOf(categoryColour, returnFlat: true)
+        }
         
         return cell
     }
@@ -57,18 +70,23 @@ class CategoryViewController: UITableViewController {
             destinationVC.selectedCategory = categories?[indexPath.row]
         }
     }
-
     
 
+    
     func save(category: Category) {
         
         do {
+            
             try realm.write {
+                
                 realm.add(category)
             }
+            
         } catch {
+            
             print("Error saving category \(error)")
         }
+        
         tableView.reloadData()
     }
     
@@ -76,8 +94,28 @@ class CategoryViewController: UITableViewController {
     func loadCategories() {
         
         categories  = realm.objects(Category.self)
-        tableView.reloadData()
         
+        tableView.reloadData()
+    }
+    
+
+    
+    override func updateModel(at indexPath: IndexPath) {
+        
+        if let categoryForDeletion = self.categories?[indexPath.row] {
+            
+            do {
+                
+                try self.realm.write {
+                    
+                    self.realm.delete(categoryForDeletion)
+                }
+                
+            } catch {
+                
+                print("Error deleting category, \(error)")
+            }
+        }
     }
     
     
@@ -86,27 +124,27 @@ class CategoryViewController: UITableViewController {
         
         var textField = UITextField()
         
-        let alert = UIAlertController(title: "Add new category", message: "", preferredStyle: .alert)
+        let alert = UIAlertController(title: "Add New Category", message: "", preferredStyle: .alert)
         
-        let action = UIAlertAction(title: "Add", style: .default) {
-            
-            (action) in
+        let action = UIAlertAction(title: "Add", style: .default) { (action) in
             
             let newCategory = Category()
             
             newCategory.name = textField.text!
             
+            newCategory.colour = UIColor.randomFlat.hexValue()
+            
             self.save(category: newCategory)
         }
+        
+        alert.addAction(action)
         
         alert.addTextField { (field) in
             
             textField = field
             
-            textField.placeholder = "Add new category"
+            textField.placeholder = "Add a new category"
         }
-        
-        alert.addAction(action)
         
         present(alert, animated: true, completion: nil)
     }
