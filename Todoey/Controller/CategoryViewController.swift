@@ -87,7 +87,7 @@ class CategoryViewController: SwipeTableViewController {
             print("Error saving category \(error)")
         }
         
-        tableView.reloadData()
+        tableView.insertRows(at: [IndexPath(row: max(0, (categories?.count ?? 0) - 1), section: 0)], with: .automatic)
     }
     
     

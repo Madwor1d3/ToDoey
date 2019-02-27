@@ -155,7 +155,7 @@ class TodoListVC: SwipeTableViewController {
                 }
             }
             
-            self.tableView.reloadData()
+            self.tableView.insertRows(at: [IndexPath(row: max(0, (self.toDoItems?.count ?? 0) - 1), section: 0)], with: .automatic)
         }
         
         alert.addTextField { (alertTextField) in
